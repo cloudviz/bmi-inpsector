@@ -87,9 +87,11 @@ PROVISION_COMMAND = "provision"
 DEPROVISION_COMMAND = "deprovision"
 LIST_SNAPSHOTS_COMMAND = "list_snapshots"
 REMOVE_IMAGE_COMMAND = "remove_image"
+BMI_INTROSPECT_COMMAND = "bmi_introspect"
 
 # Parameters
 NODE_NAME_PARAMETER = 'node'
+NODES_NAME_PARAMETER = 'nodes'
 IMAGE_NAME_PARAMETER = "img"
 SNAP_NAME_PARAMETER = "snap_name"
 PROJECT_PARAMETER = "project"
@@ -100,6 +102,8 @@ IMAGE2_NAME_PARAMETER = "img2"
 NETWORK_PARAMETER = "network"
 NIC_PARAMETER = "nic"
 CHANNEL_PARAMETER = "channel"
+RBD_MAPPED_PATH_PARAMETER = 'rbd_mapped_path'
+MOUNT_PATH_PARAMETER = 'mount_path'
 
 # Template Parameters
 IPXE_TARGET_NAME = "${target_name}"
@@ -122,6 +126,6 @@ DNSMASQ_LEASES_LOC = '/var/lib/misc/dnsmasq.leases'
 HIL_CALL_TIMEOUT = 10
 DEFAULT_SNAPSHOT_NAME = "snapshot"
 
-BMI_ADMIN_PROJECT = "bmi_infra"
+BMI_ADMIN_PROJECT = "bmi-introspect"
 
 HIL_BMI_CHANNEL = "vlan/native"

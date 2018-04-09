@@ -3,7 +3,10 @@ import base64
 import time
 
 import os
-
+from ims.common.csv_to_json2 import csv2json
+from ims.common import shell
+from ims.exception import shell_exceptions
+from ims.common.VD import readFrame
 import ims.common.config as config
 import ims.common.constants as constants
 import ims.exception.db_exceptions as db_exceptions
@@ -652,6 +655,62 @@ class BMI:
             return self.__return_error(e)
 
     @log
+    def map_image(self, img):
+        try:
+            if not self.is_admin:
+                raise AuthorizationFailedException()
+            ceph_img_name = self.__get_ceph_image_name(img)
+            rbd_name = self.fs.map(ceph_img_name)
+            return self.__return_success(rbd_name)
+        except (FileSystemException, AuthorizationFailedException) as e:
+            logger.exception('')
+            return self.__return_error(e)
+
+    @log
+    def unmap_image(self, rbd_name):
+        try:
+            if not self.is_admin:
+                raise AuthorizationFailedException()
+            self.fs.unmap(rbd_name)
+            return self.__return_success(True)
+        except (FileSystemException, AuthorizationFailedException) as e:
+            logger.exception('')
+            return self.__return_error(e)
+
+    @log
+    def mount_mapped_image(self, rbd_map_path, mount_path):
+        try:
+            if not self.is_admin:
+                raise AuthorizationFailedException()
+	    try:
+                os.stat(mount_path)
+            except:
+                os.mkdir(mount_path)
+            
+	    command = "mount " + rbd_map_path + " " + mount_path
+            shell.call(command, sudo=True)
+
+            return self.__return_success(True)
+        except (shell_exceptions.CommandFailedException, AuthorizationFailedException) as e:
+            logger.exception('')
+            return self.__return_error(e)
+
+
+    @log
+    def unmount_mapped_image(self, mount_path):
+        try:
+            if not self.is_admin:
+                raise AuthorizationFailedException()
+            command = "umount " + mount_path
+            shell.call(command, sudo=True)
+    	    os.rmdir(mount_path)
+            return self.__return_success(True)
+        except (shell_exceptions.CommandFailedException, AuthorizationFailedException) as e:
+            logger.exception('')
+            return self.__return_error(e)
+
+
+    @log
     def umount_image(self, img):
         try:
             if not self.is_admin:
@@ -688,3 +747,123 @@ class BMI:
             logger.exception('')
         except NotImplementedError:
             pass
+
+    @log
+    def bmi_introspect(self, node_name):
+        print("HELLO MOC!!", node_name)
+	return self.__return_success(node_name)
+	#return "Hello MOC!!"
+
+
+    @log
+    def vulnerability_detection(self, mount_path):
+        try:
+            if not self.is_admin:
+                raise AuthorizationFailedException()
+            crawler_path = "/root/ims_latest_new/ims/common/agentless-system-crawler/crawler/crawler.py"
+	    url_path = "/root/ims_latest_new/ims/common/crawler_output/test.csv"
+            command = "python "+crawler_path+" --features os,package --crawlmode MOUNTPOINT --mountpoint "+mount_path+" --url file://"+url_path 
+            csv_frame = shell.call(command, sudo=True)
+	    json_frame = csv2json(url_path+".0")
+            report = readFrame(json_frame)
+            return self.__return_success(report)
+        except (shell_exceptions.CommandFailedException, AuthorizationFailedException) as e:
+            logger.exception('')
+            return self.__return_error(e)
+
+
+
+
+            
+
+    @log
+    def bmi_introspect(self, node):
+        try:
+	    report = None
+            if not self.is_admin:
+                raise AuthorizationFailedException()
+
+            snap_name = node + "_snap"
+
+            print("snap name = ", snap_name)
+            print("node name = ", node)
+
+            snap_res = self.create_snapshot(node, snap_name)
+            print(snap_res)
+
+            if snap_res[constants.STATUS_CODE_KEY] == 200:
+                print('snapshot created successfully')
+
+                # finding img file for this node
+                list_img = []
+
+                list_ret = self.list_all_images()
+                if list_ret[constants.STATUS_CODE_KEY] == 200:
+                    images = list_ret[constants.RETURN_VALUE_KEY]
+                    for image in images:
+                        if image[1] == node:
+                            list_img.append(image[1])
+
+                # this stores the ceph image name
+                img = None
+                if len(list_img) != 0:
+                    img = list_img[0]
+                    print('Got Ceph Image')
+
+                map_ret = self.map_image(img)
+                if map_ret[constants.STATUS_CODE_KEY] == 200:
+                    print('Image mapped successfully')
+
+                    rbd_name = map_ret[constants.RETURN_VALUE_KEY]
+                    rbd_mapped_path = rbd_name + 'p2'
+                    mount_path = '/mnt/' + node
+
+                    mount_ret = self.mount_mapped_image(rbd_mapped_path, mount_path)
+                    if mount_ret[constants.STATUS_CODE_KEY] == 200:
+                        print('Image mounted successfully')
+
+                        vd_ret = self.vulnerability_detection(mount_path)
+                        if vd_ret[constants.STATUS_CODE_KEY] == 200:
+                            print('Vulnerability Detection Successful')
+                            report = vd_ret[constants.RETURN_VALUE_KEY]
+                         
+                        else:
+                            print('error in vulnerability detection')
+
+                        unmount_ret = self.unmount_mapped_image(mount_path)
+
+                        if unmount_ret[constants.STATUS_CODE_KEY] == 200:
+                            print('Image unmounted successfully')
+
+
+                        else:
+                            print('Error in unmounting image')
+
+                    else:
+                        print('Error in mounting image')
+
+                    unmap_ret = self.unmap_image(rbd_name)
+
+                    if unmap_ret[constants.STATUS_CODE_KEY] == 200:
+                        print('Image unmapped successfully')
+
+
+                    else:
+                        print(unmap_ret[constants.MESSAGE_KEY])
+
+                else:
+                    print(map_ret[constants.MESSAGE_KEY])
+
+                del_snap_res = self.remove_image(snap_name)
+                if del_snap_res[constants.STATUS_CODE_KEY] == 200:
+                    print('Snapshot has been deleted')
+                else:
+                    print('error in deleting snapshot')
+
+            else:
+                print('error in snapshot creation')
+
+            return self.__return_success(report)
+        except (shell_exceptions.CommandFailedException, AuthorizationFailedException) as e:
+            logger.exception('')
+            return self.__return_error(e)

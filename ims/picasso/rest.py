@@ -40,10 +40,13 @@ def rest_call(path, method, command, parameters):
 
 @trace
 def _extract_credentials(request):
+    
     base64_str = request.headers.get('Authorization')
+    
     if base64_str is not None:
         base64_str = base64_str.split(' ')[1]
         project = request.form[constants.PROJECT_PARAMETER]
+	print("in extract cred",project)
         return base64_str, project
     else:
         return None
@@ -55,12 +58,15 @@ def _rest_wrapper(method, command, parameters):
         extracted_parameters = []
         if request.method == method:
             credentials = _extract_credentials(request)
+            print("credentials recienved")
             if credentials is None:
                 return "No Authentication Details Given", 400
+            print("we have auth", parameters)
             for parameter in parameters:
                 extracted_parameters.append(request.form[parameter])
             ret = rpc_client.execute_command(command, credentials,
                                              extracted_parameters)
+	    print("result = ", ret)
             if ret[constants.STATUS_CODE_KEY] == 200:
                 ret = json.dumps(ret[constants.RETURN_VALUE_KEY])
                 if ret == 'true':
@@ -109,4 +115,10 @@ def list_snapshots():
 @rest_call("/remove_image/", "DELETE", constants.REMOVE_IMAGE_COMMAND,
            [constants.IMAGE_NAME_PARAMETER])
 def remove_image():
+    pass
+
+
+@rest_call("/bmi_introspect/", "POST", constants.BMI_INTROSPECT_COMMAND, 
+	[constants.NODE_NAME_PARAMETER])
+def bmi_introspect():
     pass

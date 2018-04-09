@@ -170,6 +170,11 @@ def list_images(project):
     data = {constants.PROJECT_PARAMETER: project}
     res = requests.post(_url + "list_images/", data=data,
                         auth=(_username, _password))
+    click.echo("username:")
+    click.echo(_username)
+    click.echo(_password)
+    click.echo(_url)
+    click.echo(data) 
     if res.status_code == 200:
         images = json.loads(res.content)
         table = PrettyTable(field_names=["Image"])
@@ -655,6 +660,258 @@ def show_mappings(project):
     click.echo("Need to Re-Implement")
 
 
+@cli.group(help='bmi_introspect Related Commands')
+def bmi_introspect():
+    pass
+
+#@bmi_introspect.command(name='map', short_help='rbd map an image for introspection')
+#@click.argument(constants.PROJECT_PARAMETER)
+#@click.argument(constants.IMAGE_NAME_PARAMETER)
+def map_image(project, img):
+	 with BMI(_username, _password, project) as bmi:
+        	ret = bmi.map_image(img)
+        	if ret[constants.STATUS_CODE_KEY] == 200:
+            		click.echo('Success')
+        	else:
+            		click.echo(ret[constants.MESSAGE_KEY])
+
+@bmi_introspect.command(name='unmap', short_help='rbd unmap an image for introspection')
+@click.argument(constants.PROJECT_PARAMETER)
+@click.argument(constants.IMAGE_NAME_PARAMETER)
+def unmap_image(project, img):
+         with BMI(_username, _password, project) as bmi:
+                ret = bmi.unmap_image(img)
+                if ret[constants.STATUS_CODE_KEY] == 200:
+                        click.echo('Success')
+                else:
+                        click.echo(ret[constants.MESSAGE_KEY])
+
+
+@bmi_introspect.command(name='mount', short_help='mount an mapped image for introspection')
+@click.argument(constants.PROJECT_PARAMETER)
+@click.argument(constants.RBD_MAPPED_PATH_PARAMETER)
+@click.argument(constants.MOUNT_PATH_PARAMETER)
+def mount_mapped_image(project, rbd_mapped_path, mount_path):
+         with BMI(_username, _password, project) as bmi:
+                ret = bmi.mount_mapped_image(rbd_mapped_path, mount_path)
+                if ret[constants.STATUS_CODE_KEY] == 200:
+                        click.echo('Success')
+                else:
+                        click.echo(ret[constants.MESSAGE_KEY])
+
+
+
+@bmi_introspect.command(name='umount', short_help='mount an mapped image for introspection')
+@click.argument(constants.PROJECT_PARAMETER)
+@click.argument(constants.MOUNT_PATH_PARAMETER)
+def unmount_mapped_image(project, mount_path):
+         with BMI(_username, _password, project) as bmi:
+                ret = bmi.unmount_mapped_image(mount_path)
+                if ret[constants.STATUS_CODE_KEY] == 200:
+                        click.echo('Success')
+                else:
+                        click.echo(ret[constants.MESSAGE_KEY])
+
+
+
+@bmi_introspect.command(name='vd', short_help='introspect the mounted image')
+@click.argument(constants.PROJECT_PARAMETER)
+@click.argument(constants.MOUNT_PATH_PARAMETER)
+def vulnerability_detection(project, mount_path):
+         with BMI(_username, _password, project) as bmi:
+                ret = bmi.vulnerability_detection(mount_path)
+                if ret[constants.STATUS_CODE_KEY] == 200:
+                        click.echo('Success')
+                else:
+                        click.echo(ret[constants.MESSAGE_KEY])
+
+
+"""
+@bmi_introspect.command(name='introspect', short_help='run bmi introspect')
+@click.argument(constants.NODE_NAME_PARAMETER)
+@click.argument(constants.SNAP_NAME_PARAMETER)
+def introspect(node, snap_name):
+   
+    
+    data = {constants.PROJECT_PARAMETER: "bmi-introspect", constants.NODE_NAME_PARAMETER: node}
+
+    res = requests.post(_url + "bmi_introspect/", data=data,
+                        auth=(_username, _password))
+    
+    
+    if res.status_code == 200:
+        snap_data = {constants.PROJECT_PARAMETER: "bmi-introspect", constants.NODE_NAME_PARAMETER: node, constants.SNAP_NAME_PARAMETER: snap_name}
+	
+	snap_res = requests.put(_url + "create_snapshot/", data=snap_data,auth=(_username, _password))
+	click.echo(snap_res.content)
+	if snap_res.status_code == 200:
+		#here all logic if snap is created
+		print("Snapshot created successfully")
+	
+		#finding img file for this node
+		list_img = []
+		with BMI(_username, _password, constants.BMI_ADMIN_PROJECT) as bmi:
+                	ret = bmi.list_all_images()
+               		 
+                	if ret[constants.STATUS_CODE_KEY] == 200:
+                        	images = ret[constants.RETURN_VALUE_KEY]
+                        	for image in images:
+                                	if image[1] == node:
+						list_img.append(image[1])
+		
+		#this stores the ceph image name
+		img = None
+		if len(list_img) != 0:
+			img = list_img[0]
+			print("Got Ceph Image")
+			
+		#map ceph image to iscsi
+		with BMI(_username, _password, data['project']) as bmi:
+        		map_ret = bmi.mount_image(img)
+			print("map ret = ======>", map_ret)
+        		if map_ret[constants.STATUS_CODE_KEY] == 200:
+				print("map ret = ", map_ret)
+            			click.echo('Success')
+        		else:
+            			click.echo(map_ret[constants.MESSAGE_KEY])
+		
+		
+		
+	
+		#remove snapshot part, all other part goes above it.
+		del_snap_data = {constants.PROJECT_PARAMETER: "bmi-introspect",constants.IMAGE_NAME_PARAMETER: snap_name}
+   		del_snap_res = requests.delete(_url + "remove_image/", data=del_snap_data, auth=(_username, _password))
+		if del_snap_res.status_code == 200:
+			print("Snapshot has been deleted")
+		else:
+			print("error in deleting snapshot")
+	else:
+		print("Snapshot not created")
+	'''
+	with BMI(_username, _password, data["project"]) as bmi:
+		ret = bmi.list_all_images()
+		
+		if ret[constants.STAUS_CODE_KEY] == 200:
+			images = ret[constants.RETURN_VALUE_KEY]
+			for image in images:
+				print(images[1])
+				click.echo(images[1])
+	'''
+    else:
+        click.echo(res.content)
+"""
+
+@cli.command(name='introspect', short_help='run bmi introspect')
+@click.argument(constants.PROJECT_PARAMETER)
+@click.argument(constants.NODES_NAME_PARAMETER, nargs=-1)
+def introspect(project, nodes):
+    for node in nodes:
+        snap_name = node + "-snap"
+        snap_data = {constants.PROJECT_PARAMETER: project, constants.NODE_NAME_PARAMETER: node,
+                     constants.SNAP_NAME_PARAMETER: snap_name}
+
+        snap_res = requests.put(_url + "create_snapshot/", data=snap_data, auth=(_username, _password))
+
+        if snap_res.status_code == 200:
+            click.echo('snapshot created successfully')
+
+            # finding img file for this node
+            list_img = []
+            with BMI(_username, _password, constants.BMI_ADMIN_PROJECT) as bmi:
+                ret = bmi.list_all_images()
+
+                if ret[constants.STATUS_CODE_KEY] == 200:
+                    images = ret[constants.RETURN_VALUE_KEY]
+                    for image in images:
+                        if image[1] == node:
+                            list_img.append(image[1])
+
+            # this stores the ceph image name
+            img = None
+            if len(list_img) != 0:
+                img = list_img[0]
+
+            with BMI(_username, _password, project) as bmi:
+		click.echo('Mapping image...')
+                map_ret = bmi.map_image(img)
+                if map_ret[constants.STATUS_CODE_KEY] == 200:
+                    click.echo('Image mapped successfully')
+                    
+                    rbd_name = map_ret[constants.RETURN_VALUE_KEY]
+		    rbd_mapped_path = rbd_name + 'p2'
+		    mount_path = '/mnt/' + node
+
+		    click.echo('Mounting image...')
+		    mount_ret = bmi.mount_mapped_image(rbd_mapped_path, mount_path)
+		    if mount_ret[constants.STATUS_CODE_KEY] == 200:
+			click.echo('Image mounted successfully')
+
+
+			vd_ret = bmi.vulnerability_detection(mount_path)
+			if vd_ret[constants.STATUS_CODE_KEY] == 200:
+				click.echo('Vulnerability Detection Successful')
+				report = vd_ret[constants.RETURN_VALUE_KEY]
+				#click.echo(report)
+			else:
+				click.echo('error in vulnerability detection')
+
+			unmount_ret = bmi.unmount_mapped_image(mount_path)
+			
+			if unmount_ret[constants.STATUS_CODE_KEY] == 200:
+                        	click.echo('Image unmounted successfully')
+
+                        
+                    	else:
+                        	click.echo('Error in unmounting image')
+
+
+		    else:
+			click.echo('Error in mounting image') 
+                    
+                    unmap_ret = bmi.unmap_image(rbd_name)
+
+                    if unmap_ret[constants.STATUS_CODE_KEY] == 200:
+                        click.echo('Image unmapped successfully')
+
+
+                    else:
+                        click.echo(ret[constants.MESSAGE_KEY])
+                    
+                    
+                else:
+                    click.echo(ret[constants.MESSAGE_KEY])
+
+            # remove snapshot part, all other part goes above it.
+            del_snap_data = {constants.PROJECT_PARAMETER: project, constants.IMAGE_NAME_PARAMETER: snap_name}
+            del_snap_res = requests.delete(_url + "remove_image/", data=del_snap_data, auth=(_username, _password))
+            if del_snap_res.status_code == 200:
+                click.echo('Snapshot has been deleted')
+            else:
+                click.echo('error in deleting snapshot')
+
+        else:
+            click.echo('error in snapshot creation')
+
+
+
+
+@cli.command(name='inspect', short_help='inspect')
+@click.argument(constants.PROJECT_PARAMETER)
+@click.argument(constants.NODE_NAME_PARAMETER)
+def inspect(project, node):
+    
+    data = {constants.PROJECT_PARAMETER: project, constants.NODE_NAME_PARAMETER: node}
+    res = requests.post(_url + "bmi_introspect/", data=data,
+                        auth=(_username, _password))
+    if res.status_code == 200:
+        click.echo(res.content)
+    else:
+        click.echo(res.content)
+
+
+
+
+
 @cli.command(name='upload', help='Upload Image to BMI')
 def upload():
     """
@@ -669,6 +926,17 @@ def download():
     Coming Soon
     """
     click.echo('Not Yet Implemented')
+
+    res = requests.post(_url + "list_images/", data=data,
+                        auth=(_username, _password))
+    if res.status_code == 200:
+        images = json.loads(res.content)
+        table = PrettyTable(field_names=["Image"])
+        for image in images:
+            table.add_row([image])
+        click.echo(table.get_string())
+    else:
+        click.echo(res.content)
 
 
 if __name__ == '__main__':
